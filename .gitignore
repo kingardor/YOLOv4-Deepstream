@@ -30,3 +30,27 @@
 *.exe
 *.out
 *.app
+
+# Built binaries
+*.o
+ds-yolo
+
+# vscode
+.vscode
+
+# TensorRT Engines
+*/*/*/*.engine
+*.engine
+
+# Weights
+*.weights
+
+# Input sources
+inputsources.txt
+
+# Extra files
+.Makefile.swp
+.cproject
+.metadata/
+.project
+RemoteSystemTempFiles/

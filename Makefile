@@ -1,0 +1,59 @@
+APP:= ds-yolo
+
+CXX:= g++ -std=c++17
+
+TARGET_DEVICE = $(shell g++ -dumpmachine | cut -f1 -d -)
+
+NVDS_VERSION:=5.1
+
+LIB_INSTALL_DIR?=/opt/nvidia/deepstream/deepstream-$(NVDS_VERSION)/lib/
+
+ifeq ($(TARGET_DEVICE),aarch64)
+  CFLAGS:= -DPLATFORM_TEGRA
+endif
+
+SRCS:= $(wildcard ds_src/*.c)
+SRCS+= $(wildcard ds_src/*.cpp)
+
+INCS:= $(wildcard ds_src/*.h)
+
+PKGS:= gstreamer-1.0 opencv4
+
+OBJS:= $(SRCS:.cpp=.o)
+
+CFLAGS+= -I/opt/nvidia/deepstream/deepstream-5.1/sources/includes \
+		 -DDS_VERSION_MINOR=1 -DDS_VERSION_MAJOR=5
+
+CFLAGS+= `pkg-config --cflags $(PKGS)`
+
+LIBS:= `pkg-config --libs $(PKGS)`
+
+LIBS+= -L$(LIB_INSTALL_DIR) -L/usr/local/cuda/lib64 -lcudart \
+	   -lnvdsgst_meta -lnvds_meta -lnvdsgst_helper -lm -lrt \
+       -Wl,-rpath,$(LIB_INSTALL_DIR)
+
+LIBS+= -pthread -O3 -Ofast
+
+LIBS+= -lcurl -lgnutls -luuid -lnvbufsurface -lnvbufsurftransform
+
+LIBS+=  -lopencv_core -lopencv_highgui -lopencv_imgproc -lboost_system -lopencv_imgcodecs -pthread -lz -lssl -lcrypto -lboost_program_options \
+		-lboost_filesystem -lboost_date_time -lboost_context -lboost_coroutine -lboost_chrono \
+		-lboost_log -lboost_thread -lboost_log_setup -lboost_regex -lboost_atomic
+
+all: ds-yolo objdets
+
+objdets: yolov4
+ds-yolo: $(APP)
+
+%.o: %.cpp $(INCS) Makefile
+	$(CXX) -c -o $@ $(CFLAGS) $<
+
+$(APP): $(OBJS) Makefile
+	$(CXX) -o $(APP) $(OBJS) $(LIBS)
+
+yolov4:
+	cd custom_parsers/nvds_customparser_yolov4 && $(MAKE)
+
+clean:
+	rm -rf $(OBJS) $(APP)
+	cd custom_parsers/nvds_customparser_yolov4 && $(MAKE) clean
